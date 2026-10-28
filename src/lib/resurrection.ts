@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { exec } from 'child_process';
 import { createTwoFilesPatch } from 'diff';
+import { isWithin } from './safe-path';
 import { AutopsyFinding, PatchProposal, PatchFile, VerificationRun } from './types';
 
 export function generatePatchProposal(
@@ -80,11 +82,9 @@ export function generatePatchProposal(
         // Replace new Buffer(...) -> Buffer.from(...)
         patchedContent = patchedContent.replace(/new\s+Buffer\s*\(([^)]+)\)/g, 'Buffer.from($1)');
 
-        // Replace fs.exists(...) -> fs.existsSync(...)
-        patchedContent = patchedContent.replace(/fs\.exists\s*\(([^,]+),\s*function\s*\(([^)]+)\)\s*\{/g, 'const exists = fs.existsSync($1);\n  (($2) => {');
-
-        // Replace crypto.createCipher(...) -> crypto.createCipheriv(...)
-        patchedContent = patchedContent.replace(/crypto\.createCipher\s*\(/g, 'crypto.createCipheriv(');
+        // NOTE: fs.exists(cb) and crypto.createCipher are intentionally NOT rewritten here.
+        // Both need semantic changes (callback restructuring; key/IV design) that a regex
+        // cannot do safely, so they remain autopsy findings for manual or LLM-assisted repair.
 
         // Replace sys.puts(...) / util.print(...) -> console.log(...)
         patchedContent = patchedContent.replace(/(?:sys\.puts|util\.print)\s*\(/g, 'console.log(');
@@ -117,22 +117,11 @@ export function generatePatchProposal(
     }
   }
 
-  // If no automatic patch diff was produced, create a clean maintenance baseline
-  if (patchFiles.length === 0) {
-    const defaultDiff = `--- a/package.json\n+++ b/package.json\n@@ -5,1 +5,3 @@\n+  "engines": {\n+    "node": ">=20.0.0"\n+  },\n`;
-    patchFiles.push({
-      path: 'package.json',
-      originalContent: '{\n  "name": "revival-target"\n}',
-      patchedContent: '{\n  "name": "revival-target",\n  "engines": {\n    "node": ">=20.0.0"\n  }\n}',
-      diff: defaultDiff
-    });
-  }
-
   return {
     id: `patch_${repoId}_${Date.now().toString(36)}`,
     repositoryId: repoId,
     title: `Resurrection Patch #1: Modernize Node.js 22 LTS compatibility & deprecation fixes`,
-    summary: `Replaces deprecated Buffer/crypto constructors, modernizes package.json Node runtime declaration, replaces abandoned dependencies with native modern APIs, and stabilizes test harness.`,
+    summary: `Replaces deprecated Buffer constructors and legacy console helpers, modernizes package.json Node runtime declaration, replaces abandoned dependencies with native modern APIs, and stabilizes test harness.`,
     status: 'PROPOSED',
     files: patchFiles,
     verificationCommand: 'node test.js',
@@ -142,31 +131,32 @@ export function generatePatchProposal(
 
 export async function runSandboxVerification(
   repoPath: string,
-  patch: PatchProposal
+  patch: PatchProposal,
+  timeoutSeconds = 15
 ): Promise<VerificationRun> {
   const startTime = Date.now();
   const testCmd = patch.verificationCommand || 'node test.js';
 
-  // 1. Execute unpatched baseline to record the original failure evidence
-  const beforeOutcome = await executeCommandInDir(repoPath, testCmd);
-
-  // 2. Prepare an isolated sandbox directory in /tmp
-  const sandboxDir = path.join('/tmp', `last-commit-sandbox-${Date.now()}`);
-  fs.mkdirSync(sandboxDir, { recursive: true });
+  // Both runs happen in a throwaway copy so the real repository is never executed in.
+  const sandboxDir = fs.mkdtempSync(path.join(os.tmpdir(), 'last-commit-sandbox-'));
+  const timeoutMs = Math.max(1, timeoutSeconds) * 1000;
 
   try {
-    // Copy repo files to sandbox
     copyRecursiveSync(repoPath, sandboxDir);
 
-    // Apply patch files to sandbox
+    // 1. Execute unpatched baseline to record the original failure evidence
+    const beforeOutcome = await executeCommandInDir(sandboxDir, testCmd, timeoutMs);
+
+    // 2. Apply patch files to sandbox
     for (const file of patch.files) {
-      const targetFilePath = path.join(sandboxDir, file.path);
+      const targetFilePath = path.resolve(sandboxDir, file.path);
+      if (!isWithin(sandboxDir, targetFilePath)) continue;
       fs.mkdirSync(path.dirname(targetFilePath), { recursive: true });
       fs.writeFileSync(targetFilePath, file.patchedContent, 'utf8');
     }
 
     // 3. Execute verification command in patched sandbox
-    const afterOutcome = await executeCommandInDir(sandboxDir, testCmd);
+    const afterOutcome = await executeCommandInDir(sandboxDir, testCmd, timeoutMs);
     const durationMs = Date.now() - startTime;
     const isSuccess = afterOutcome.exitCode === 0;
 
@@ -204,6 +194,9 @@ export async function runSandboxVerification(
       }
     };
   } catch (err: any) {
+    try {
+      fs.rmSync(sandboxDir, { recursive: true, force: true });
+    } catch {}
     return {
       id: `verif_${Date.now().toString(36)}`,
       patchId: patch.id,
@@ -216,9 +209,9 @@ export async function runSandboxVerification(
       durationMs: Date.now() - startTime,
       timestamp: new Date().toISOString(),
       beforeOutcome: {
-        exitCode: beforeOutcome.exitCode,
+        exitCode: 1,
         summary: 'Baseline execution failed',
-        logs: beforeOutcome.stderr || beforeOutcome.stdout
+        logs: err.message
       },
       afterOutcome: {
         exitCode: 1,
@@ -229,11 +222,19 @@ export async function runSandboxVerification(
   }
 }
 
-function executeCommandInDir(dir: string, cmd: string): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+function executeCommandInDir(dir: string, cmd: string, timeoutMs: number): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  // Scrubbed environment: no inherited secrets/API keys from the server process.
+  const env: NodeJS.ProcessEnv = {
+    PATH: process.env.PATH || '/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin',
+    HOME: dir,
+    TMPDIR: dir,
+    NODE_ENV: 'test',
+    CI: '1'
+  };
   return new Promise((resolve) => {
-    exec(cmd, { cwd: dir, timeout: 15000, env: { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}` } }, (error, stdout, stderr) => {
+    exec(cmd, { cwd: dir, timeout: timeoutMs, maxBuffer: 1024 * 1024, env }, (error, stdout, stderr) => {
       resolve({
-        exitCode: error ? (error.code || 1) : 0,
+        exitCode: error ? (typeof error.code === 'number' ? error.code : 1) : 0,
         stdout: stdout.toString(),
         stderr: stderr.toString()
       });
@@ -242,9 +243,15 @@ function executeCommandInDir(dir: string, cmd: string): Promise<{ exitCode: numb
 }
 
 function copyRecursiveSync(src: string, dest: string) {
-  const exists = fs.existsSync(src);
-  const stats = exists && fs.statSync(src);
-  const isDirectory = exists && stats && stats.isDirectory();
+  let stats: fs.Stats | null = null;
+  try {
+    stats = fs.lstatSync(src);
+  } catch {
+    return;
+  }
+  if (stats.isSymbolicLink()) return; // never follow symlinks out of the repo
+  const exists = true;
+  const isDirectory = stats.isDirectory();
 
   if (isDirectory) {
     fs.mkdirSync(dest, { recursive: true });

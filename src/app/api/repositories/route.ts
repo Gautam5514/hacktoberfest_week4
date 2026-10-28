@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
 import path from 'path';
 import { store } from '@/lib/store';
 import { Repository } from '@/lib/types';
+import { z } from 'zod';
+import { resolveAllowedDirectory, getAllowedRoots } from '@/lib/safe-path';
+
+const ImportSchema = z.object({
+  url: z.string().max(500).optional(),
+  localPath: z.string().max(1000).optional(),
+  name: z.string().max(120).optional()
+});
 
 export async function GET() {
   try {
@@ -15,20 +22,28 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { url, localPath, name } = body;
+    const parsed = ImportSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+    }
+    const { url, localPath, name } = parsed.data;
 
-    let repoPath = localPath;
+    let repoPath: string = '';
     let repoName = name;
     let sourceUrl = url || '';
     let description = 'Locally imported repository for code recovery and autopsy.';
 
     // If local path provided
     if (localPath) {
-      if (!fs.existsSync(localPath)) {
-        return NextResponse.json({ success: false, error: `Local directory not found: ${localPath}` }, { status: 400 });
+      const safeDir = resolveAllowedDirectory(localPath);
+      if (!safeDir) {
+        return NextResponse.json({
+          success: false,
+          error: `Directory not found or outside allowed import roots. Set LASTCOMMIT_ALLOWED_ROOTS to permit more (current: ${getAllowedRoots().join(', ')}).`
+        }, { status: 400 });
       }
-      repoName = repoName || path.basename(localPath);
+      repoPath = safeDir;
+      repoName = repoName || path.basename(safeDir);
     } else if (url) {
       // Validate GitHub URL format
       const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
@@ -49,10 +64,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Must provide either url or localPath' }, { status: 400 });
     }
 
-    const id = `repo_${Date.now().toString(36)}`;
+    const id = `repo_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     const newRepo: Repository = {
       id,
-      name: repoName,
+      name: repoName || 'unnamed',
       description,
       sourceUrl: sourceUrl || `file://${repoPath}`,
       commitSha: Math.random().toString(16).substring(2, 10),
@@ -74,7 +89,8 @@ export async function POST(req: Request) {
     store.runAutopsy(id);
 
     return NextResponse.json({ success: true, repository: newRepo });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('POST /api/repositories failed', error);
+    return NextResponse.json({ success: false, error: 'Failed to import repository' }, { status: 500 });
   }
 }

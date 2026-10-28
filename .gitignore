@@ -29,3 +29,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local app data
+.lastcommit_data.json
+.lastcommit_data.json.*

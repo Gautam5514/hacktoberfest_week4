@@ -9,10 +9,9 @@ export async function POST(
     const { id } = params;
     // id can be repoId or patchId
     let repoId = id;
-    if (id.startsWith('patch_')) {
-      const parts = id.split('_');
-      repoId = parts[1];
-    }
+    // patch ids look like patch_<repoId>_<timestamp>; repo ids may contain underscores
+    const patchMatch = id.match(/^patch_(.+)_[^_]+$/);
+    if (patchMatch) repoId = patchMatch[1];
 
     const verification = await store.verifyPatch(repoId);
     const patch = store.getPatch(repoId);

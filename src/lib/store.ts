@@ -130,7 +130,12 @@ class Store {
         };
       }
     } catch (e) {
-      // ignore
+      // Never clobber a data file we failed to parse: keep a copy and start fresh in memory.
+      try {
+        fs.copyFileSync(DATA_FILE, `${DATA_FILE}.corrupt-${Date.now()}`);
+      } catch {}
+      console.error('Failed to load .lastcommit_data.json; using seed data', e);
+      return getSeedData();
     }
     const initial = getSeedData();
     this.saveData(initial);
@@ -139,9 +144,11 @@ class Store {
 
   private saveData(data: AppDatabase) {
     try {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+      const tmp = `${DATA_FILE}.${process.pid}.tmp`;
+      fs.writeFileSync(tmp, JSON.stringify(data), 'utf8');
+      fs.renameSync(tmp, DATA_FILE);
     } catch (e) {
-      // ignore
+      console.error('Failed to persist .lastcommit_data.json', e);
     }
   }
 
@@ -293,7 +300,7 @@ class Store {
     const patch = this.getPatch(repoId);
     if (!patch) throw new Error(`No patch available for repository: ${repoId}`);
 
-    const result = await runSandboxVerification(repo.workspacePath, patch);
+    const result = await runSandboxVerification(repo.workspacePath, patch, this.db.settings.sandboxTimeoutSeconds);
     this.db.verifications[repoId] = result;
 
     if (result.status === 'passed') {
@@ -350,4 +357,6 @@ class Store {
   }
 }
 
-export const store = new Store();
+// Survive HMR / separate route bundles by caching the singleton on globalThis.
+const globalForStore = globalThis as unknown as { __lastCommitStore?: Store };
+export const store = globalForStore.__lastCommitStore ?? (globalForStore.__lastCommitStore = new Store());

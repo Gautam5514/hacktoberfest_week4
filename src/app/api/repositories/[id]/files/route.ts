@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { store } from '@/lib/store';
+import { resolveWithin } from '@/lib/safe-path';
+
+const MAX_FILE_BYTES = 1024 * 1024;
 
 export async function GET(
   req: Request,
@@ -23,12 +26,13 @@ export async function GET(
 
     // If a specific file is requested, read its content
     if (requestedFile) {
-      const fullPath = path.resolve(repo.workspacePath, requestedFile);
-      if (!fullPath.startsWith(path.resolve(repo.workspacePath))) {
-        return NextResponse.json({ success: false, error: 'Access forbidden outside workspace' }, { status: 403 });
+      const fullPath = resolveWithin(repo.workspacePath, requestedFile);
+      if (!fullPath) {
+        return NextResponse.json({ success: false, error: 'File not found or outside workspace' }, { status: 404 });
       }
-      if (!fs.existsSync(fullPath)) {
-        return NextResponse.json({ success: false, error: 'File not found' }, { status: 404 });
+      const fileStat = fs.statSync(fullPath);
+      if (!fileStat.isFile() || fileStat.size > MAX_FILE_BYTES) {
+        return NextResponse.json({ success: false, error: 'Not a readable file (or larger than 1 MB)' }, { status: 413 });
       }
       const content = fs.readFileSync(fullPath, 'utf8');
       return NextResponse.json({ success: true, file: requestedFile, content });
@@ -42,20 +46,24 @@ export async function GET(
         if (['node_modules', '.git', '.next', 'dist', 'build', '.DS_Store'].includes(e.name)) continue;
         const full = path.join(dir, e.name);
         const r = path.join(rel, e.name);
+        if (e.isSymbolicLink()) continue;
         if (e.isDirectory()) walk(full, r);
         else if (e.isFile()) {
           const stat = fs.statSync(full);
           const ext = path.extname(e.name).toLowerCase();
           const language = ext === '.ts' || ext === '.tsx' ? 'typescript' : ext === '.js' ? 'javascript' : ext === '.json' ? 'json' : 'text';
-          const content = fs.readFileSync(full, 'utf8');
-          fileList.push({ path: r, size: stat.size, language, loc: content.split('\n').length });
+          const loc = stat.size > MAX_FILE_BYTES
+            ? 0
+            : fs.readFileSync(full, 'utf8').split('\n').length;
+          fileList.push({ path: r, size: stat.size, language, loc });
         }
       }
     };
 
     walk(repo.workspacePath);
     return NextResponse.json({ success: true, files: fileList });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('GET /files failed', error);
+    return NextResponse.json({ success: false, error: 'Failed to read workspace' }, { status: 500 });
   }
 }

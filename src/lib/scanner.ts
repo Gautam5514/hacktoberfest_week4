@@ -122,7 +122,8 @@ export function scanRepository(repoPath: string, repoId: string): ScanResult {
       // Check engines
       if (manifest.engines && manifest.engines.node) {
         const engineSpec = manifest.engines.node;
-        if (engineSpec.includes('8') || engineSpec.includes('10') || engineSpec.includes('12') || engineSpec.includes('14')) {
+        const engineMajor = parseInt((String(engineSpec).match(/\d+/) || ['99'])[0], 10);
+        if (engineMajor < 18) {
           const lineIndex = lines.findIndex(l => l.includes('"node"'));
           findings.push({
             id: getNextFindingId(),
