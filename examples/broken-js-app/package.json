@@ -1,0 +1,15 @@
+{
+  "name": "markdown-tomb-parser",
+  "version": "0.4.1",
+  "description": "Lightweight markdown metadata extractor and header tagger built in 2016.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=8 <14"
+  },
+  "dependencies": {
+    "request": "^2.88.2"
+  },
+  "scripts": {
+    "test": "node test.js"
+  }
+}

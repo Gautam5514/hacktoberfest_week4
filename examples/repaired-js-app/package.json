@@ -1,0 +1,13 @@
+{
+  "name": "markdown-tomb-parser",
+  "version": "1.0.0",
+  "description": "Lightweight markdown metadata extractor and header tagger - Resurrected by The Last Commit.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {},
+  "scripts": {
+    "test": "node test.js"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "repositories": {
+    "sample-broken-app": {
+      "id": "sample-broken-app",
+      "name": "markdown-tomb-parser",
+      "owner": "abandoned-lab",
+      "description": "A 2016 Markdown metadata extractor and AST compiler that fails under modern Node 20+ due to deprecated Buffer constructors and broken imports.",
+      "sourceUrl": "https://github.com/abandoned-lab/markdown-tomb-parser",
+      "commitSha": "a1b2c3d9e8f7",
+      "workspacePath": "/Users/kunalkumar/Desktop/Gautam/lastweek_hack/examples/broken-js-app",
+      "lastCommitDate": "2016-11-04T14:22:00Z",
+      "stars": 412,
+      "forks": 38,
+      "status": "dormant",
+      "deathCause": "Node.js 6 -> 20+ API break (new Buffer & broken relative import)",
+      "deathYear": 2016,
+      "language": "javascript",
+      "tags": [
+        "Markdown",
+        "CLI",
+        "Node.js 6",
+        "Buffer Deprecation"
+      ],
+      "createdAt": "2026-10-28T10:35:18.037Z"
+    },
+    "express-vintage-2016": {
+      "id": "express-vintage-2016",
+      "name": "auth-vault-microservice",
+      "owner": "legacy-systems",
+      "description": "Early OAuth token broker relying on unmaintained request npm package and obsolete crypto.createCipher() calls.",
+      "sourceUrl": "https://github.com/legacy-systems/auth-vault-microservice",
+      "commitSha": "8f7e6d5c4b3a",
+      "workspacePath": "/Users/kunalkumar/Desktop/Gautam/lastweek_hack/examples/broken-js-app",
+      "lastCommitDate": "2017-03-12T09:15:00Z",
+      "stars": 890,
+      "forks": 145,
+      "status": "dormant",
+      "deathCause": "Insecure crypto.createCipher() deprecation & request package death",
+      "deathYear": 2017,
+      "language": "javascript",
+      "tags": [
+        "Express",
+        "Auth",
+        "Deprecated Crypto",
+        "Request"
+      ],
+      "createdAt": "2026-10-28T10:35:18.038Z"
+    },
+    "angularjs-tombstone": {
+      "id": "angularjs-tombstone",
+      "name": "dash-metrics-angular",
+      "owner": "spectral-corp",
+      "description": "AngularJS 1.5 data visualization dashboard frozen in time with Gulp 3 and obsolete Node-Sass native bindings.",
+      "sourceUrl": "https://github.com/spectral-corp/dash-metrics-angular",
+      "commitSha": "c3d4e5f6a1b2",
+      "workspacePath": "/Users/kunalkumar/Desktop/Gautam/lastweek_hack/examples/broken-js-app",
+      "lastCommitDate": "2015-08-20T17:40:00Z",
+      "stars": 230,
+      "forks": 41,
+      "status": "dormant",
+      "deathCause": "LibSass / Node-Sass compilation failure on modern V8 engines",
+      "deathYear": 2015,
+      "language": "javascript",
+      "tags": [
+        "AngularJS 1.x",
+        "Gulp 3",
+        "Node-Sass",
+        "Legacy Frontend"
+      ],
+      "createdAt": "2026-10-28T10:35:18.038Z"
+    }
+  },
+  "jobs": {},
+  "findings": {},
+  "architectures": {},
+  "messages": {},
+  "patches": {},
+  "verifications": {},
+  "reports": {},
+  "settings": {
+    "ollamaEndpoint": "http://localhost:11434",
+    "modelName": "gemma3:4b",
+    "temperature": 0.2,
+    "enableFallback": true,
+    "autoVerify": true,
+    "sandboxTimeoutSeconds": 30
+  }
+}
