@@ -1,121 +1,133 @@
----
-title: "The Last Commit: I Built a Local AI That Brings Abandoned Code Back to Life"
-published: true
-tags: devchallenge, hf26challenge, gemma, mastra, open-source
-cover_image: https://raw.githubusercontent.com/abandoned-lab/the-last-commit/main/assets/cover.png
-canonical_url: https://dev.to/challenges/hf26
----
+*This is a submission for the [Hacktoberfest Open-Source AI Challenge Week 4: Ghost in the Machine](https://dev.to/challenges/hacktoberfest-week4-2026-10-26).*
 
-# The Last Commit: I Built a Local AI That Brings Abandoned Code Back to Life
+A repository doesn't need a ghost to become haunted. Sometimes all it takes is a missing import, an obsolete dependency, and a README nobody has touched in ten years.
 
-> **"Dead Code Deserves a Second Life."**  
-> An open-source AI-powered resurrection lab for forgotten software.
+**The Last Commit** is a recovery lab for that software. Its premise is simple: **dead code deserves a second life—and a passing test should be the evidence.**
 
-Every single week on GitHub, thousands of repositories silently slip into dormancy. Node.js evolves, runtime APIs deprecate (`new Buffer()`), native C++ build bindings break (LibSass & `node-sass`), and dependencies become obsolete (`request`). 
+## What I Built
 
-Developers want to reuse these forgotten gems, but the friction of diagnosing why an older project won't compile under modern Node 22 LTS often leads them to abandon the code entirely.
+The Last Commit helps developers inspect forgotten JavaScript and TypeScript projects, understand what broke, review focused repairs, and compare test results before and after a patch.
 
-For **Hacktoberfest 2026 (Week 4 DevChallenge)**, I built **The Last Commit** — a local-first code recovery platform that examines abandoned repositories, autopsies their points of failure, explains their architecture with source citations, generates reviewable unified patches, and **empirically proves the resurrection works via isolated sandbox test execution**.
+The Halloween metaphor follows the actual workflow:
 
----
+- **The graveyard:** a catalog of dormant specimens.
+- **The autopsy:** findings about deprecated APIs, broken imports, dependencies, and runtime assumptions.
+- **The Ghost:** a repository assistant that sends supplied findings and file context to Gemma 3 through Ollama.
+- **The resurrection:** reviewable unified diffs and before/after test execution.
+- **The recovery report:** an exportable record of findings and verification.
 
-## 1. What I Built
+The theme is also about remembering the work inside old software. A broken build doesn't erase the useful idea underneath it.
 
-**The Last Commit** is a developer platform designed with a dark developer workspace aesthetic and subtle Halloween laboratory accents (Void `#090B0A`, Panel `#151A17`, Border `#28352D`, Ghostly Life `#A4F4B8`, Pumpkin Amber `#FF9F43`, and Crimson `#FF5E57`).
+## Demo
 
-The application answers five fundamental questions for any abandoned repository:
+**[Open The Last Commit](https://hacktoberfestweek4.vercel.app/)** · **[Open the guided demo](https://hacktoberfestweek4.vercel.app/demo)**
 
-1. **Original Purpose:** What was this software originally created to do?
-2. **Autopsy:** Why did it break? (Engine mismatches, deprecated constructors, broken relative imports)
-3. **Salvage:** Which parts of the codebase are still clean and reusable?
-4. **Repair:** What minimal, safe unified diff will revive it?
-5. **Empirical Proof:** Can we verify that the repair actually works with before-and-after tests?
+The public site is the hosted interface. For the complete filesystem and local-model workflow, run the repository locally: a Vercel server cannot access Ollama running on a visitor's laptop. The hosted preview should not be treated as proof of live Gemma inference.
 
-### Complete Lab Workflow
-- **`/` (The Resurrect Importer):** Paste any public GitHub URL or local directory path.
-- **`/graveyard` (The Memorial Catalog):** Interactive digital tombstones tracking causes of death, death years (2015–2021), and revival statuses.
-- **`/lab/[id]` (Specimen Telemetry):** Health score dial (0–100), runtime delta (`Node 8-14` &rarr; `Node 22 LTS`), and loc inventory.
-- **`/lab/[id]/autopsy` (Findings & Evidence):** Line-by-line evidence inspector with verified AST citations and severity badges.
-- **`/lab/[id]/ghost` (The Ghost AI):** Source-grounded conversational agent powered by **Gemma 3** that references exact files without hallucination.
-- **`/lab/[id]/resurrection` (Diff Workbench & Sandbox):** Side-by-side Monaco diff viewer with a one-click isolated sandbox test runner proving test passes.
-- **`/lab/[id]/report` (Recovery Report):** Exportable audit report with markdown copy and JSON download.
-- **`/settings` (Inference Control):** Ollama daemon monitor and model selector (`gemma3:4b`, `gemma3:1b`, `gemma3:12b`).
+### A judge's walkthrough
 
----
+1. Open the guided demo and choose **Resurrect the broken app**. It imports the bundled `examples/broken-js-app` specimen.
+2. Follow **Scan → Autopsy → Repair → Prove**. Inspect the findings and the proposed diff.
+3. Compare the before/after logs and exit codes. A successful repair should be backed by the test result.
+4. Open the full autopsy, ask the Ghost why the project broke, and export the recovery report.
 
-## 2. Demo
+For a reproducible local check:
 
-### Interactive Video Walkthrough & Screenshots
-- **Specimen Autopsy:** Demonstrating the detection of `new Buffer()` deprecation, outdated `engines.node`, and broken local imports.
-- **The Ghost in Action:** Asking `"Why did this repository break?"` and receiving exact file and line citations (`package.json:8`, `index.js:6`).
-- **Sandbox Test Verification:**
-  - **Before Patch:** `node test.js` fails with `Cannot find module './missing-util'` (Exit code: 1).
-  - **After Patch:** `node test.js` passes with `✓ All 4 resurrection tests passed! Code is fully operational on Node 20+` (Exit code: 0).
+```bash
+git clone https://github.com/Gautam5514/hacktoberfest_week4.git
+cd hacktoberfest_week4
+npm install
+npm run test:sample
+npm run dev
+```
 
----
+For Gemma-powered answers, install Ollama, start its daemon, and download the model:
 
-## 3. Code & Repository
+```bash
+ollama pull gemma3:4b
+```
 
-- **GitHub Repository:** `the-last-commit`
-- **License:** MIT License
-- **Stack:** Next.js 14 App Router, TypeScript, Tailwind CSS, Lucide React, Gemma 3 (via Ollama), Mastra agent framework, unified diff engine.
+Open `http://localhost:3000/settings` to check the model connection, then use the lab's Ghost view. Once the model and dependencies are downloaded, analysis of a local repository can stay on the same machine. Importing a remote GitHub repository still needs network access.
 
----
+### What I verified
 
-## 4. How I Built It
+The included sample verification script produced these results:
 
-### Architecture
-The project was architected as a local-first system with two cooperative pipelines:
+| Check | Result |
+| --- | --- |
+| Broken fixture | Expected failure, exit code 1 |
+| Repaired fixture | All four resurrection assertions passed |
+| Core routes and implementation files | All 12 expected files present |
 
-1. **Deterministic Static Autopsy Scanner (`src/lib/scanner.ts`):**  
-   Before asking an LLM to guess what is wrong, the scanner performs deterministic checks:
-   - Evaluates `package.json` against a curated database of obsolete and dangerous packages (`request`, `node-sass`, `left-pad`, `nomnom`).
-   - Flags missing or placeholder scripts (`"test": "echo no test specified"`).
-   - Scans JS/TS files for deprecated Node.js APIs (`new Buffer`, `fs.exists`, `crypto.createCipher`, `sys.puts`).
-   - Resolves all local relative imports (`./missing-util`) to verify whether target modules physically exist on disk.
+This checks the bundled fixtures and project structure. It is not a claim that arbitrary repositories can be repaired automatically, or that a live model was exercised by that script.
 
-2. **Gemma 3 & Mastra Agent Layer (`src/lib/ghost-ai.ts`):**  
-   Using Google DeepMind's open-weight **Gemma 3 4B** running locally through Ollama, The Ghost acts as an untrusted repository analyst. It is constrained by strict prompting:
-   - Treats all repository content as untrusted data.
-   - Refuses to execute code on its own.
-   - Produces source-grounded answers citing exact files and lines.
-   - Includes an intelligent local fallback reasoning engine to guarantee zero downtime even if the Ollama daemon is offline.
+## Code
 
-3. **Isolated Sandbox Verification (`src/lib/resurrection.ts`):**  
-   A repair is only as good as its proof. The sandbox engine:
-   - Runs the test suite on the original code to capture the baseline failure.
-   - Creates a temporary, disposable sandbox directory in `/tmp`.
-   - Applies the AI-generated unified patch.
-   - Runs the verification command (`node test.js`) and captures duration, stdout, stderr, and exit codes.
+**[Source repository](https://github.com/Gautam5514/hacktoberfest_week4)**
 
----
+The application uses Next.js 14, React, TypeScript, Tailwind CSS, the `diff` package, and Ollama's chat API with `gemma3:4b`.
 
-## 5. Why Does Open Innovation Matter?
+The most useful places to inspect are:
 
-Open source made it possible to build a tool that revives forgotten open-source software **without depending on a closed, commercial AI API**.
+- [Static scanner](https://github.com/Gautam5514/hacktoberfest_week4/blob/main/src/lib/scanner.ts)
+- [Ghost model integration](https://github.com/Gautam5514/hacktoberfest_week4/blob/main/src/lib/ghost-ai.ts)
+- [Patch generation and verification](https://github.com/Gautam5514/hacktoberfest_week4/blob/main/src/lib/resurrection.ts)
+- [Evidence verification for GitHub analysis](https://github.com/Gautam5514/hacktoberfest_week4/blob/main/src/lib/github/ai.ts)
 
-Three core principles demonstrate this:
-1. **Offline Independence:** You can pull `gemma3:4b`, disconnect your internet connection, and execute the full autopsy and recovery workflow offline.
-2. **Model Portability:** Because we use open weights and standardized Ollama APIs, developers can swap Gemma 3 4B for Gemma 3 1B on low-memory laptops or Gemma 3 12B on high-end workstations.
-3. **True Privacy:** Code remains on the developer's machine. Proprietary source code and sensitive internal repositories never leave the localhost boundary.
+## How I Built It
 
----
+### 1. Start with evidence
 
-## 6. My Agent Session
+The scanner checks manifests, selected deprecated dependencies, known API patterns, and relative imports. Findings include file references and evidence snippets.
 
-Developing The Last Commit was an exercise in agentic software engineering. By defining a strict product blueprint upfront, separating deterministic AST checks from probabilistic AI reasoning, and backing every repair with empirical sandbox tests, we created a tool that bridges the gap between AI hype and real developer utility.
+This creates a useful boundary: the model explains supplied evidence; it doesn't need to invent the initial diagnosis.
 
----
+### 2. Give the repository a voice with Gemma
 
-## 7. The Spirit of It
+The Ghost builds a prompt from the repository's architecture summary, indexed files, findings, and recent messages. It calls Ollama's `/api/chat` endpoint with `gemma3:4b` and a low temperature.
 
-Code written a decade ago represents human creativity, ingenuity, and problem solving. Just because an engine deprecated an API or an author stepped away doesn't mean that code has to remain dead. 
+Its system instructions tell it to treat repository content as untrusted data, separate hypotheses from verified facts, cite relevant files, and avoid claiming it ran tests.
 
-With **The Last Commit**, dead code gets the second life it deserves.
+Those instructions reduce risk; they do not guarantee factual answers. In the GitHub analysis pipeline, a separate verifier checks quoted text against the cited evidence and downgrades unsupported claims.
 
----
+If Ollama is unavailable, the Ghost returns deterministic, finding-based responses. **That fallback is not model inference.** The scanner and fixture demo can work without the model, while open-weight Gemma provides the conversational interpretation when connected.
 
-## 8. Prize Categories
+### 3. Keep repairs small enough to inspect
 
-- **Best Use of Gemma:** Grounded on-device analysis with Gemma 3 4B via Ollama, utilizing its 128K context window to reason about complete repositories without cloud dependence.
-- **Best Use of Mastra:** Structured agent orchestration, prompt templates, and tool interfaces connecting static code scanners with AI reasoning workflows.
+Current patch generation is rule-based. It handles selected transformations such as replacing `new Buffer(...)` with `Buffer.from(...)`, updating runtime metadata, and repairing the bundled fixture's known missing-helper pattern.
+
+It deliberately leaves changes such as obsolete crypto APIs for manual review because those need semantic decisions. A patch that works for the sample is not a general migration strategy.
+
+The orchestration is implemented in TypeScript. Although an internal workflow class uses the name Mastra, the project does not currently depend on the Mastra SDK.
+
+### 4. Ask the tests
+
+Verification copies the repository to a temporary directory, records a baseline run, applies the proposed files, and runs the verification command again.
+
+The result includes logs and exit codes. This makes the outcome inspectable instead of relying on an assistant saying “fixed.”
+
+**Current limitation:** a temporary directory and timeout are not a security isolation boundary. Test commands execute as subprocesses on the host, so this prototype's verification should be used with trusted specimens. Hardened container isolation is future work.
+
+## Why Does Open Innovation Matter?
+
+A tool for preserving software should itself be possible to keep running.
+
+Gemma's open weights and Ollama's local runtime let the recovery assistant operate without sending its model prompts to a proprietary cloud inference service. In a local deployment, that gives developers control over the code context they share with the model.
+
+It also makes the model replaceable. Developers can inspect the prompts, change the endpoint or model configuration, and adapt the workflow to their hardware. Gemma is open-weight under its own terms; that is distinct from the application's source licensing.
+
+The tradeoff is real: local inference needs memory, a downloaded model, and a running daemon. I chose that tradeoff because old software deserves a recovery path that isn't tied to one hosted AI service staying available.
+
+## The Spirit of It
+
+The moment this project is built around is small: a terminal moves from a failing test to a passing one.
+
+That doesn't prove an entire abandoned system is healthy. It gives a developer a concrete starting point—and a reason to keep investigating.
+
+In **Ghost in the Machine**, the ghost is the intent left behind in the repository. The lab helps someone find it again.
+
+## Prize Categories
+
+**Best Use of Gemma:** Gemma 3 through Ollama powers the local repository assistant, interpreting scanner findings and file context. The reproducible local setup above shows how to exercise that integration.
+
+*AI assistance was used to develop and prepare this submission, including the cover illustration and editorial work. Implementation details and limitations are described explicitly above.*
