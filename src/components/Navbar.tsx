@@ -8,6 +8,16 @@ import { Skull, Ghost, Archive, Cpu, Settings, Terminal, ShieldCheck } from 'luc
 export default function Navbar() {
   const pathname = usePathname();
 
+  if (pathname === '/') return (
+    <header className="landing-nav">
+      <div className="landing-nav-inner">
+        <Link href="/" className="landing-brand"><span className="landing-brand-icon"><img src="/logo.svg" width={36} height={36} alt="" /></span><span><strong>THE LAST COMMIT<span style={{color:'#b5f268'}}>.</span></strong><small>A CODE RESURRECTION LAB</small></span></Link>
+        <nav className="landing-nav-links" aria-label="Main navigation"><a href="#how-it-works">How it works</a><Link href="/graveyard">The graveyard</Link><Link href="/demo">Live demo <span style={{color:'#b5f268'}}>↗</span></Link><Link href="/tracker">My repos</Link><Link href="/settings">Settings</Link></nav>
+        <a href="#resurrect" className="landing-nav-cta">Enter the lab <span aria-hidden="true">↗</span></a>
+      </div>
+    </header>
+  );
+
   return (
     <header className="border-b border-border bg-panel/90 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -16,7 +26,7 @@ export default function Navbar() {
         <div className="flex items-center space-x-6">
           <Link href="/" className="flex items-center space-x-2.5 group">
             <div className="w-9 h-9 rounded-lg bg-void border border-border flex items-center justify-center text-life group-hover:border-life transition-colors shadow-ghost">
-              <Ghost className="w-5 h-5 animate-pulseGhost" />
+              <img src="/logo.svg" width={36} height={36} alt="" />
             </div>
             <div className="flex flex-col">
               <span className="font-mono font-bold tracking-wider text-textMain group-hover:text-life transition-colors flex items-center gap-1.5">
@@ -39,6 +49,28 @@ export default function Navbar() {
               }`}
             >
               /resurrect
+            </Link>
+
+            <Link
+              href="/tracker"
+              className={`px-3 py-1.5 rounded-md text-xs font-medium font-mono transition-colors ${
+                pathname.startsWith('/tracker')
+                  ? 'bg-border text-life font-semibold'
+                  : 'text-textMuted hover:text-textMain hover:bg-panelElevated'
+              }`}
+            >
+              /tracker
+            </Link>
+
+            <Link
+              href="/demo"
+              className={`px-3 py-1.5 rounded-md text-xs font-medium font-mono transition-colors ${
+                pathname === '/demo'
+                  ? 'bg-border text-life font-semibold'
+                  : 'text-textMuted hover:text-textMain hover:bg-panelElevated'
+              }`}
+            >
+              /demo
             </Link>
 
             <Link

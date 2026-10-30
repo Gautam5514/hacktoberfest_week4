@@ -1,11 +1,25 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 
 export const metadata: Metadata = {
+  applicationName: 'The Last Commit',
   title: 'The Last Commit | AI Code Resurrection Lab',
+  manifest: '/site.webmanifest',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/logo.svg', type: 'image/svg+xml' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: '/favicon.ico',
+  },
   description: 'Dead Code Deserves a Second Life. An open-source AI-powered resurrection lab for forgotten software powered by Gemma 3.',
 };
+
+export const viewport: Viewport = { themeColor: '#0B0E0C' };
 
 export default function RootLayout({
   children,

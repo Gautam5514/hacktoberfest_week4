@@ -132,3 +132,18 @@ open http://localhost:3000
 
 MIT License © 2026 The Last Commit Contributors.
 Open weights governed by Google Gemma Terms of Use.
+
+---
+
+## GitHub Tracker (`/tracker`)
+
+Connect a read-only GitHub token to index every repository you can access, track new commits, flag dormant projects, and generate evidence-cited revival plans with your local Ollama model.
+
+| Env var | Purpose |
+| :--- | :--- |
+| `LASTCOMMIT_SECRET` | Encryption key for the stored token (otherwise a random key file in `.lastcommit/`) |
+| `LASTCOMMIT_SYNC_MINUTES` | Poll interval, default 30 |
+| `GITHUB_WEBHOOK_SECRET` | Enables `POST /api/github/webhook` (optional accelerator; polling stays the source of truth) |
+| `LASTCOMMIT_DATA_DIR` | Where tracker data lives, default `.lastcommit/` |
+
+Dormancy uses days since the last **human** default-branch commit (bots excluded): Active ≤30, Cooling ≤90, Dormant ≤180, Deep sleep beyond; thresholds are configurable via `PATCH /api/github/settings`. The revival score is a labelled heuristic, not a prediction. AI claims are only shown as "confirmed" when their quote is found verbatim in the cited GitHub data.
